@@ -110,20 +110,13 @@ http://127.0.0.1:5000
 
 ## 📸 Screenshots
 
-Add screenshots of:
+### Home Page
 
-- Home Page
-- Resume Analysis Results
+![Home Page](screenshots/home.png)
 
-Example:
+### Analysis Results
 
-```
-screenshots/
-    home.png
-    analysis.png
-```
-
----
+![Analysis Results](screenshots/analysis.png)
 
 ## 📈 Future Improvements
 
