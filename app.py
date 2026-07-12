@@ -1,13 +1,13 @@
 from flask import Flask, render_template, request
-import google.generativeai as genai
+from google import genai
 import os
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Configure Gemini API
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# Initialize the new GenAI client
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 app = Flask(__name__)
 
@@ -23,7 +23,6 @@ def index():
         if not job_description or not resume_text:
             error_msg = "Please provide both the Job Description and Resume text."
         else:
-            # The Prompt Engineering phase [cite: 382]
             prompt = f"""
             You are a strict but helpful technical recruiter. Analyze the following resume against the provided job description.
             
@@ -40,8 +39,11 @@ def index():
             """
             
             try:
-                model = genai.GenerativeModel('gemini-1.5-flash')
-                response = model.generate_content(prompt)
+                # Updated to the new SDK structure and current model
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=prompt
+                )
                 analysis_result = response.text
             except Exception as e:
                 error_msg = f"API Error: {str(e)}"
