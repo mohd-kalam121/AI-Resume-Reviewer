@@ -110,7 +110,15 @@ class GeminiClient {
         }
 
         if (!response.ok) {
-            const error = new UpstreamError(`Gemini returned ${response.status}.`);
+            // 503/429 mean the model is overloaded, not that anything is wrong
+            // with the request. Once retries are exhausted the caller still
+            // needs to know that trying again is the right move.
+            const overloaded = response.status === 503 || response.status === 429;
+            const error = new UpstreamError(
+                overloaded
+                    ? 'The AI service is busy right now. Please try again in a moment.'
+                    : `The AI service returned an error (${response.status}).`
+            );
             error.retryable = RETRYABLE_STATUS.has(response.status);
             throw error;
         }

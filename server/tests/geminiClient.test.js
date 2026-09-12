@@ -56,7 +56,8 @@ test('retries are bounded and the final error propagates', async () => {
     const fetchImpl = stubFetch([response({}, 503)]);
     const client = new GeminiClient({ apiKey: 'test-key', fetchImpl, sleep: noSleep, maxRetries: 2 });
 
-    await assert.rejects(() => client.analyzeResumeMatch('r', 'jd'), /503/);
+    // An exhausted 503 should still tell the caller that retrying is worthwhile.
+    await assert.rejects(() => client.analyzeResumeMatch('r', 'jd'), /busy right now/);
     assert.equal(fetchImpl.calls.length, 3); // initial + 2 retries
 });
 
