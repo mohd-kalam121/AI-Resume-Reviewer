@@ -1,18 +1,8 @@
-# Virtual environment
-.venv/
-
-# Environment variables
+node_modules/
 .env
-
-# Python cache
+dist/
+build/
+coverage/
 __pycache__/
 *.pyc
-
-# Flask
-instance/
-
-# VS Code
-.vscode/
-
-# macOS
 .DS_Store

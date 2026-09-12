@@ -1,138 +1,107 @@
-# 🚀 AI Resume Reviewer
+# AI Resume Reviewer
 
-An AI-powered web application that analyzes a candidate's resume against a job description using Google's Gemini API and provides an ATS-style evaluation with actionable feedback.
+A full-stack tool that scores a resume against a job description using the
+Gemini API — an ATS-style match score, the specific keywords missing from
+the resume, and concrete rewrite suggestions.
 
----
+![Node](https://img.shields.io/badge/node-%3E%3D20-339933?logo=nodedotjs&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-25%20passing-brightgreen)
 
-## ✨ Features
-
-- 📄 Resume vs Job Description analysis
-- 🤖 AI-powered ATS match scoring
-- 🔍 Missing keyword detection
-- 💡 Personalized resume improvement suggestions
-- ⚡ Fast response using Google Gemini API
-- 🌐 Clean and responsive web interface
-
----
-
-## 🛠 Tech Stack
-
-- Python
-- Flask
-- Google Gemini API (`google-genai`)
-- HTML
-- CSS
-- Bootstrap 5
-- JavaScript
-
----
-
-## 📂 Project Structure
+## Architecture
 
 ```
-AI_Resume_Reviewer/
-│
-├── app.py
-├── .env
-├── requirements.txt
-├── README.md
-│
-├── templates/
-│   └── index.html
-│
-└── static/
+client/          React + Vite frontend
+server/          Node.js + Express REST API
+  src/
+    geminiClient.js    Gemini REST client: retry, timeout, schema-constrained JSON
+    validate.js        Request validation
+    routes/analyze.js  POST /api/analyze
+    middleware/        Rate limiting, centralised error handling
+  tests/               25 tests, Node's built-in test runner, no live API calls
 ```
 
----
+## Design notes
 
-## ⚙️ Installation
+- **The Gemini response is schema-constrained**, not parsed from free text.
+  The request includes a `responseSchema` (`matchScore: integer`,
+  `missingKeywords: string[]`, `suggestions: string[]`), so the API always
+  gets back exactly that shape or the request fails cleanly.
+- **Retry with jittered exponential backoff on transient failures only.**
+  The Gemini endpoint returns 503 under load fairly often in practice; a
+  503/429/5xx is retried, a 400 is not, since retrying a malformed request
+  just reproduces the same 400.
+- **Every request is validated before it reaches Gemini** — non-empty fields
+  and a length cap on both inputs, so a paste error doesn't turn into a
+  large, costly API call.
+- **Rate limited per client**, since every request here is a paid API call,
+  not just a compute cost.
+- **25 tests**, zero test dependencies. The Gemini client is tested via a
+  stubbed `fetch` (retry logic, timeout, malformed response, missing key),
+  with no live network calls in the suite; the Express layer is tested
+  end-to-end with a stubbed client, including that a validation failure
+  never reaches Gemini at all.
 
-Clone the repository
+## Running locally
 
+**Server:**
 ```bash
-git clone <repository-url>
-cd AI_Resume_Reviewer
+cd server
+npm install
+cp .env.example .env   # add your GEMINI_API_KEY
+npm run dev             # http://localhost:5000
 ```
 
-Create a virtual environment
-
+**Client**, in a second terminal:
 ```bash
-python -m venv .venv
+cd client
+npm install
+cp .env.example .env
+npm run dev             # http://localhost:5173
 ```
 
-Activate it
-
-Windows
-
+**Tests:**
 ```bash
-.venv\Scripts\activate
+cd server
+npm test
 ```
 
-Linux/macOS
+## API
 
-```bash
-source .venv/bin/activate
+### `POST /api/analyze`
+
+```jsonc
+// Request
+{ "resume": "...", "jobDescription": "..." }
 ```
 
-Install dependencies
-
-```bash
-pip install -r requirements.txt
+```jsonc
+// 200 OK
+{
+  "status": "success",
+  "data": {
+    "matchScore": 75,
+    "missingKeywords": ["CI/CD", "SQL"],
+    "suggestions": ["...", "...", "..."]
+  }
+}
 ```
 
----
+Errors follow one shape: `{ "status": "error", "code": "...", "message": "..." }`,
+with `VALIDATION_ERROR` (400), `RATE_LIMITED` (429), `UPSTREAM_ERROR` (502) and
+`INTERNAL_ERROR` (500).
 
-## 🔑 Environment Variables
+## Stack
 
-Create a `.env` file.
+**Server** — Node.js, Express, native `fetch` (no SDK dependency for the
+Gemini call)
+**Client** — React, Vite
 
-```
-GEMINI_API_KEY=YOUR_API_KEY
-```
+## Limitations
 
-Get your API key from Google AI Studio.
+- Resume and job description are pasted as text; no PDF upload yet.
+- No persistence — each analysis is stateless.
+- No authentication; this is a single-user utility, not a multi-tenant product.
 
----
+## Author
 
-## ▶️ Running the Project
-
-```bash
-python app.py
-```
-
-Open your browser:
-
-```
-http://127.0.0.1:5000
-```
-
----
-
-## 📸 Screenshots
-
-### Home Page
-
-![Home Page](screenshots/home.png)
-
-### Analysis Results
-
-![Analysis Results](screenshots/analysis.png)
-
-## 📈 Future Improvements
-
-- Resume PDF upload
-- Download report as PDF
-- ATS score visualization
-- Keyword highlighting
-- Authentication system
-- Resume history
-
----
-
-## 👨‍💻 Author
-
-**Mohd Kalam**
-
-B.Tech Mathematics & Computing
-
-Delhi Technological University (DTU)
+**Mohd Kalam** — B.Tech Mathematics & Computing, Delhi Technological University (DTU)
